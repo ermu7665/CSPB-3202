@@ -1,0 +1,58 @@
+import gymnasium as gym
+import numpy as np
+
+# Function to train the Q-learning agent
+def train_agent(env, alpha=0.8, gamma=0.95, epsilon=0.1, episodes=500, epsilon_decay=0.995):
+    # Initialize the Q-table with zeros for all state-action pairs
+    Q = np.zeros([env.observation_space.n, env.action_space.n])
+    # Loop over each episode
+    for episode in range(episodes):
+        state = env.reset()[0]  # Reset the environment to start a new episode
+        done = False  # Initialize the 'done' flag as False
+        # Loop until the episode is finished
+        while not done:
+            # Choose an action using the epsilon-greedy strategy
+            if np.random.uniform(0, 1) < epsilon:
+                action = env.action_space.sample()  # Explore: select a random action
+            else:
+                action = np.argmax(Q[state, :])  # Exploit: select the action with max Q-value
+
+            # Take the action and observe the new state and reward
+            new_state, reward, done, _, _ = env.step(action)
+            
+            # Update Q-value using the Bellman equation
+            Q[state, action] = Q[state, action] + alpha * (reward + gamma * np.max(Q[new_state, :]) - Q[state, action])
+            
+            # Transition to the new state
+            state = new_state
+
+        # Decay epsilon to reduce exploration over time
+        epsilon = max(0.01, epsilon * epsilon_decay)
+
+    return Q  # Return the learned Q-table
+
+# Function to test the trained agent
+def test_agent(env, Q):
+    state = env.reset()[0]  # Reset the environment to start the test
+    env.render()  # Render the initial state
+    done = False
+    total_reward = 0
+    # Loop until the episode is finished
+    while not done:
+        # Select the best action based on the learned Q-values
+        action = np.argmax(Q[state, :])
+        # Take the action and observe the new state and reward
+        state, reward, done, _, _ = env.step(action)
+        env.render()  # Render the current state
+        total_reward += reward  # Accumulate the reward
+    print(f"Total reward during test: {total_reward}")  # Print the total reward earned during the test
+    return total_reward
+
+# Initialize the Cliff Walking environment with human-readable rendering
+env = gym.make("CliffWalking-v0", render_mode="human")
+
+# Train the agent using the training function
+Q = train_agent(env)
+
+# Test the trained agent using the test function
+test_reward = test_agent(env, Q)
